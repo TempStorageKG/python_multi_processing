@@ -3,6 +3,7 @@ import time
 import socket
 import pickle
 import sys
+import random
 
 
 def funct_1(p, ip, port):
@@ -13,8 +14,10 @@ def funct_1(p, ip, port):
         return(pid) #parent exits
 
     os.setsid() #move child to BG
+    print ("Child process started: ", os.getpid())
 
-    time.sleep(1)
+    sleep_time=random.randint(3,10)
+    time.sleep(sleep_time)
 
     pkl_name = str(p) + '-' + str(pid) + ".pkl"
 
@@ -32,64 +35,66 @@ def funct_1(p, ip, port):
     socketObject.sendall(pickle.dumps(dict_a))
     socketObject.close()
 
+    print ("Child process ended: ", os.getpid(), " slept for: ", sleep_time)
+
     os._exit(0) #child exit.
 
-num_elements = 100
 
-counter = 0 
+if __name__ == "__main__":
 
-processes_to_run = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    processes_to_run = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,50]
 
-# Create a server socket
-serverSocket = socket.socket()
+    # Create a server socket
+    serverSocket = socket.socket()
 
-# Associate the server socket with the IP and Port
-ip = "127.0.0.1"
-port = 35491
-serverSocket.bind((ip, port))
+    # Associate the server socket with the IP and Port
+    ip = "127.0.0.1"
+    port = 35491
+    serverSocket.bind((ip, port))
 
-# Make the server listen for incoming connections load up to the number of processes
+    # Make the server listen for incoming connections load up to the number of processes
 
 
-count = 0
+    count = 0
+    total = 0
 
-file_list = []
-tmp_dict = {'index':[], 'from':[], 'to':[], 'pid':[]}
-start_time = time.time()
+    file_list = []
+    tmp_dict = {'index':[], 'from':[], 'to':[], 'pid':[]}
+    start_time = time.time()
 
-processes = 5
-if (processes>len(processes_to_run)):
-    processes = len(processes_to_run)-1
+    processes = 5
+    if (processes>len(processes_to_run)):
+        processes = len(processes_to_run)-1
 
-serverSocket.listen(processes)
-pids = []
+    serverSocket.listen(processes)
+    pids = []
 
-while (total < len(processes_to_run)):
+    while (total < len(processes_to_run)):
 
-    if(count<len(processes_to_run)):
-        pid=funct_1(processes_to_run[count], ip, port)  #PD.loc(count)
-        pids.append(pid)
+        if(count<len(processes_to_run)):
+            pid=funct_1(processes_to_run[count], ip, port)  #PD.loc(count)
+            pids.append(pid)
 
-        count += 1
+            count += 1
         
-    if len(pids) == processes or ((len(processes_to_run)-count)<processes):
-        (clientConnection, clientAddress) = serverSocket.accept()
+        if len(pids) == processes or ((len(processes_to_run)-count)<processes):
+            (clientConnection, clientAddress) = serverSocket.accept()
 
-        data = pickle.loads(clientConnection.recv(15000))
-        for x in tmp_dict:
-            if x == 'pid':
-                pids.remove(data[x])
-            else:
-                tmp_dict[x].append(data[x])
+            data = pickle.loads(clientConnection.recv(15000))
+            for x in tmp_dict:
+                if x == 'pid':
+                    pids.remove(data[x])
+                else:
+                    tmp_dict[x].append(data[x])
       
-        total += 1
+            total += 1
 
 
-serverSocket.close()
+    serverSocket.close()
 
-total_time = time.time() - start_time
+    total_time = time.time() - start_time
 
-print("Ended", total_time)
-exit()
+    print("Ended", total_time)
+    exit()
 
 
