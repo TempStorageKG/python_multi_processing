@@ -94,6 +94,7 @@ if __name__ == "__main__":
 
     total_time = time.time() - start_time
 
+    print(tmp_dict)
     print("Ended", total_time)
     exit()
 
