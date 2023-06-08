@@ -4,22 +4,24 @@ import socket
 import pickle
 import sys
 import random
+import sqlite3 as slite
 
 
 def funct_1(p, ip, port):
     
     pid=os.fork()
-    dict_a = {'index':[], 'from':[], 'to':[], 'pid':-1}
+    dict_a = {'index':[], 'from':[], 'to':[]}
     if pid > 0:
         return(pid) #parent exits
 
     os.setsid() #move child to BG
     print ("Child process started: ", os.getpid())
 
-    sleep_time=random.randint(3,10)
-    time.sleep(sleep_time)
+    #sleep_time=random.randint(3,10)
+    #sleep_time=1    
+    #time.sleep(sleep_time)
 
-    pkl_name = str(p) + '-' + str(pid) + ".pkl"
+    pkl_name = str(p) + '-' + str(os.getpid()) + ".pkl"
 
     #Create a socket instance
     socketObject = socket.socket()
@@ -27,15 +29,29 @@ def funct_1(p, ip, port):
     #Using the socket connect to a server...in this case localhost
     socketObject.connect((ip, port))
 
-    dict_a['index'].append(str(p) + pkl_name)
-    dict_a['from'].append(str(p) + "TMP_1")
-    dict_a['to'].append(str(p) + "TMP_2")
-    dict_a['pid'] = os.getpid()
+    dict_a['index'].append(pkl_name)
+    dict_a['from'].append(str(p) + "--TMP_1")
+    dict_a['to'].append(str(p) + "--TMP_2")
 
-    socketObject.sendall(pickle.dumps(dict_a))
+    conn = slite.connect("messages.db")
+    cursor = conn.cursor()
+
+    # create a table
+
+    insert_str = 'insert into messages (pid, message) values (?,?)'
+    insert_tuple = (os.getpid(), pickle.dumps(dict_a))
+    #print()
+
+    cursor.execute(insert_str, insert_tuple)
+
+    conn.commit()
+    conn.close()
+ 
+
+    socketObject.sendall(pickle.dumps(os.getpid()))
     socketObject.close()
 
-    print ("Child process ended: ", os.getpid(), " slept for: ", sleep_time)
+    #print ("Child process ended: ", str(os.getpid()), " slept for: ", sleep_time)
 
     os._exit(0) #child exit.
 
@@ -69,6 +85,18 @@ if __name__ == "__main__":
     serverSocket.listen(processes)
     pids = []
 
+    #create DB if not there and the table.
+    conn = slite.connect("messages.db")
+    cursor = conn.cursor()
+
+    # create a table
+    cursor.execute("""CREATE TABLE if not exists messages (pid int, message blob)""")
+    cursor.execute('''delete from messages''')
+
+    conn.commit()
+    conn.close()
+    
+
     while (total < len(processes_to_run)):
 
         if(count<len(processes_to_run)):
@@ -81,18 +109,33 @@ if __name__ == "__main__":
             (clientConnection, clientAddress) = serverSocket.accept()
 
             data = pickle.loads(clientConnection.recv(15000))
-            for x in tmp_dict:
-                if x == 'pid':
-                    pids.remove(data[x])
-                else:
-                    tmp_dict[x].append(data[x])
-      
+            pids.remove(data)
+
+     
             total += 1
 
 
     serverSocket.close()
 
     total_time = time.time() - start_time
+    
+    #create DB if not there and the table.
+    conn = slite.connect("messages.db")
+    cursor = conn.cursor()
+
+    # create a table
+    cursor.execute("""select * from messages""")
+    rows = cursor.fetchall()
+
+    for row in rows:
+        unpickled = pickle.loads(row[1])
+        #print (row[0], unpickled)
+        
+        for x in unpickled:
+            tmp_dict[x].append(unpickled[x])
+
+
+    conn.close()
 
     print(tmp_dict)
     print("Ended", total_time)
